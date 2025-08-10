@@ -1,0 +1,107 @@
+/* Login.css */
+
+.loginWrapper {
+  background: linear-gradient(to right, #6366f1, #8b5cf6, #ec4899);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.logincontainer {
+  margin-left: -400px;
+}
+.signupheight {
+  background-color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    width: 200%;
+    height: 456px;
+}
+.loginbox {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  width: 200%;
+  height: 400px;
+}
+
+.logintitle {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.loginform .formgroup {
+  margin-bottom: 1rem;
+}
+
+.loginform label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #555;
+}
+
+.loginform input {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+.formoptions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.formoptions a {
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.formoptions a:hover {
+  text-decoration: underline;
+}
+
+.loginbutton {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.loginbutton:hover {
+  background-color: #4f46e5;
+}
+
+.signuptext {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.signuptext a {
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.signuptext a:hover {
+  text-decoration: underline;
+}
