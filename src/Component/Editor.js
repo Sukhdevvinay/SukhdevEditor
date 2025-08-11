@@ -4,7 +4,13 @@ import { data, Link } from "react-router";
 import Profile from "./profile";
 import "../Stylesheet/editor.css";
 
-const socket = io("https://sukhdeveditor-backend.onrender.com"); // Connect to My Backend Server 
+const io = new Server(server, {
+  cors: {
+    origin: "https://sukhdev-editor.vercel.app",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+}); // Connect to My Backend Server 
 
 
 export default function SukhdevEditor() {
@@ -178,4 +184,5 @@ export default function SukhdevEditor() {
     </div>
   );
 }
+
 
