@@ -22,7 +22,7 @@ const Profile = () => {
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('https://sukhdeveditor-backend.onrender.com/logout/logout',{
+      const res = await fetch('https://sukhdeveditor-vhwo.onrender.com/logout/logout',{
         method : 'GET',
         credentials : 'include'
       });
@@ -52,5 +52,6 @@ const Profile = () => {
 };
 
 export default Profile;
+
 
 
