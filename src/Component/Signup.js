@@ -10,7 +10,7 @@ const Signup = () => {
   const handleSignup = async (e) => {
     e.preventDefault();
     try {   // Sending a data to this end Point after filling this form
-      const res = await fetch('https://sukhdeveditor-backend.onrender.com/Signup/signup', {
+      const res = await fetch('https://sukhdeveditor-vhwo.onrender.com/Signup/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', 
@@ -79,4 +79,5 @@ const Signup = () => {
 };
 
 export default Signup;
+
 
