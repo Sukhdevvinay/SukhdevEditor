@@ -8,7 +8,7 @@ const Login = () => {
   const loginfunction = async(e) => {
     e.preventDefault();
     try {
-      const res = await fetch("https://sukhdeveditor-backend.onrender.com/login/login",{
+      const res = await fetch("https://sukhdeveditor-vhwo.onrender.com/login/login",{
       method : "POST",
       headers: {
           'Content-Type': 'application/json',
@@ -72,3 +72,4 @@ export default Login;
 
 
 // Sukhdevvinay9693@gmail.com : 123456
+
