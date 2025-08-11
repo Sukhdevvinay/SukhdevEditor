@@ -4,13 +4,10 @@ import { data, Link } from "react-router";
 import Profile from "./profile";
 import "../Stylesheet/editor.css";
 
-const io = new Server(server, {
-  cors: {
-    origin: "https://sukhdev-editor.vercel.app",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-}); // Connect to My Backend Server 
+const socket = io("https://sukhdeveditor-backend.onrender.com", { // Connect to My Backend Server 
+  withCredentials: true,
+  transports: ['websocket', 'polling']
+}); 
 
 
 export default function SukhdevEditor() {
