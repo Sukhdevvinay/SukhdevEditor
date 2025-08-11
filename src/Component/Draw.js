@@ -13,7 +13,6 @@ import {
   Polygon,
   IText
 } from 'fabric';
-
 const socket = io("https://sukhdeveditor-vhwo.onrender.com", {  // It is connecting to my Backedn Server
   withCredentials: true,
   transports: ['websocket', 'polling']
@@ -410,5 +409,6 @@ function Draw() {
 
 
 export default Draw;
+
 
 
