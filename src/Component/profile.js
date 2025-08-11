@@ -10,7 +10,7 @@ const Profile = () => {
   useEffect(() => {
     const path = window.location.pathname.split('/')[1]; // Gets "editor" or "Draw"
     // console.log("path : ",path);
-    fetch(`http://localhost:3000/${path}/send_details`, {
+    fetch(`https://sukhdeveditor-backend.onrender.com/${path}/send_details`, {
       method: 'GET',
       credentials: 'include', // If you're using cookies
     })
@@ -22,7 +22,7 @@ const Profile = () => {
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:3000/logout/logout',{
+      const res = await fetch('https://sukhdeveditor-backend.onrender.com/logout/logout',{
         method : 'GET',
         credentials : 'include'
       });
@@ -52,3 +52,4 @@ const Profile = () => {
 };
 
 export default Profile;
+
