@@ -4,7 +4,7 @@ import { data, Link } from "react-router";
 import Profile from "./profile";
 import "../Stylesheet/editor.css";
 
-const socket = io("http://localhost:3000"); // Connect to My Backend Server 
+const socket = io("https://sukhdeveditor-backend.onrender.com"); // Connect to My Backend Server 
 
 
 export default function SukhdevEditor() {
@@ -51,7 +51,7 @@ export default function SukhdevEditor() {
     const interval = setInterval(() => {
       // console.log("Typed data : ",Typed_data);
       if (Typed_data !== "") {
-        fetch("http://localhost:3000/editor/save_text", {
+        fetch("https://sukhdeveditor-backend.onrender.com/editor/save_text", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -74,7 +74,7 @@ export default function SukhdevEditor() {
   }, [Typed_data]);
 
   useEffect(() => {
-    fetch('http://localhost:3000/editor/send_details', {
+    fetch('https://sukhdeveditor-backend.onrender.com/editor/send_details', {
       method: 'GET',
       credentials: 'include', // If you're using cookies
     })
@@ -178,3 +178,4 @@ export default function SukhdevEditor() {
     </div>
   );
 }
+
