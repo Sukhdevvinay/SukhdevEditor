@@ -10,7 +10,7 @@ const Profile = () => {
   useEffect(() => {
     const path = window.location.pathname.split('/')[1]; // Gets "editor" or "Draw"
     // console.log("path : ",path);
-    fetch(`https://sukhdeveditor-backend.onrender.com/${path}/send_details`, {
+    fetch(`https://sukhdeveditor-vhwo.onrender.com/${path}/send_details`, {
       method: 'GET',
       credentials: 'include', // If you're using cookies
     })
@@ -52,4 +52,5 @@ const Profile = () => {
 };
 
 export default Profile;
+
 
