@@ -14,7 +14,7 @@ import {
   IText
 } from 'fabric';
 
-const socket = io("http://localhost:3000"); // It is connecting to my Backedn Server
+const socket = io("https://sukhdeveditor-backend.onrender.com"); // It is connecting to my Backedn Server
 
 function Draw() {
 
@@ -91,7 +91,7 @@ function Draw() {
     const interval = setInterval(() => {
       if (canvasInstance) {
         const data = canvasInstance.current.toJSON();
-        fetch("http://localhost:3000/Draw/save_draw", {
+        fetch("https://sukhdeveditor-backend.onrender.com/Draw/save_draw", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -106,7 +106,7 @@ function Draw() {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3000/Draw/send_details', {
+    fetch('https://sukhdeveditor-backend.onrender.com/Draw/send_details', {
       method: 'GET',
       credentials: 'include', // If you're using cookies
     })
@@ -404,5 +404,6 @@ function Draw() {
     </>
   );
 }
+
 
 export default Draw;
