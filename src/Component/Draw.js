@@ -14,7 +14,10 @@ import {
   IText
 } from 'fabric';
 
-const socket = io("https://sukhdeveditor-backend.onrender.com"); // It is connecting to my Backedn Server
+const socket = io("https://sukhdeveditor-backend.onrender.com", {  // It is connecting to my Backedn Server
+  withCredentials: true,
+  transports: ['websocket', 'polling']
+});
 
 function Draw() {
 
@@ -407,3 +410,4 @@ function Draw() {
 
 
 export default Draw;
+
