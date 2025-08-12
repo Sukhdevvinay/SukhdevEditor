@@ -4,10 +4,12 @@ import { data, Link } from "react-router";
 import Profile from "./profile";
 import "../Stylesheet/editor.css";
 
-const socket = io("https://sukhdeveditor-vhwo.onrender.com", { // Connect to My Backend Server 
-  withCredentials: true,
-  transports: ['websocket', 'polling']
-}); 
+// const socket = io("https://sukhdeveditor-vhwo.onrender.com", { // Connect to My Backend Server 
+//   withCredentials: true,
+//   transports: ['websocket', 'polling']
+// }); 
+const socket = io("https://sukhdeveditor-vhwo.onrender.com");
+
 
 
 export default function SukhdevEditor() {
@@ -181,6 +183,7 @@ export default function SukhdevEditor() {
     </div>
   );
 }
+
 
 
 
