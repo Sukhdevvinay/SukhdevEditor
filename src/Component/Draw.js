@@ -13,11 +13,11 @@ import {
   Polygon,
   IText
 } from 'fabric';
-// const socket = io("https://sukhdeveditor-vhwo.onrender.com", {  // It is connecting to my Backedn Server
-//   withCredentials: true,
-//   transports: ['websocket', 'polling']
-// });
-const socket = io("https://sukhdeveditor-vhwo.onrender.com"); // It is connecting to my Backedn Server
+const socket = io("https://sukhdeveditor-vhwo.onrender.com", {  // It is connecting to my Backedn Server
+  withCredentials: true,
+  transports: ['websocket', 'polling']
+});
+// const socket = io("https://sukhdeveditor-vhwo.onrender.com"); // It is connecting to my Backedn Server
 function Draw() {
 
   const canvasRef = useRef(null);
@@ -409,6 +409,7 @@ function Draw() {
 
 
 export default Draw;
+
 
 
 
