@@ -8,7 +8,12 @@ import "../Stylesheet/editor.css";
 //   withCredentials: true,
 //   transports: ['websocket', 'polling']
 // }); 
-const socket = io("https://sukhdeveditor-vhwo.onrender.com");
+// const socket = io("https://sukhdeveditor-vhwo.onrender.com");
+
+const socket = io("https://sukhdeveditor-vhwo.onrender.com", {
+  withCredentials: true,
+  transports: ["websocket", "polling"],
+});
 
 
 
@@ -183,6 +188,7 @@ export default function SukhdevEditor() {
     </div>
   );
 }
+
 
 
 
