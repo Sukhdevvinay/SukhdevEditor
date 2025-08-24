@@ -4,13 +4,13 @@ import { data, Link } from "react-router";
 import Profile from "./profile";
 import "../Stylesheet/editor.css";
 
-// const socket = io("https://sukhdeveditor-vhwo.onrender.com", { // Connect to My Backend Server 
+// const socket = io("https://sukhdev-editor-backend.onrender.com", { // Connect to My Backend Server 
 //   withCredentials: true,
 //   transports: ['websocket', 'polling']
 // }); 
-// const socket = io("https://sukhdeveditor-vhwo.onrender.com");
+// const socket = io("https://sukhdev-editor-backend.onrender.com");
 
-const socket = io("https://sukhdeveditor-vhwo.onrender.com", {
+const socket = io("https://sukhdev-editor-backend.onrender.com", {
   withCredentials: true,
   transports: ["websocket", "polling"],
 });
@@ -61,7 +61,7 @@ export default function SukhdevEditor() {
     const interval = setInterval(() => {
       // console.log("Typed data : ",Typed_data);
       if (Typed_data !== "") {
-        fetch("https://sukhdeveditor-vhwo.onrender.com/editor/save_text", {
+        fetch("https://sukhdev-editor-backend.onrender.com/editor/save_text", {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -84,7 +84,7 @@ export default function SukhdevEditor() {
   }, [Typed_data]);
 
   useEffect(() => {
-    fetch('https://sukhdeveditor-vhwo.onrender.com/editor/send_details', {
+    fetch('https://sukhdev-editor-backend.onrender.com/editor/send_details', {
       method: 'GET',
       credentials: 'include', // If you're using cookies
     })
@@ -188,6 +188,7 @@ export default function SukhdevEditor() {
     </div>
   );
 }
+
 
 
 
