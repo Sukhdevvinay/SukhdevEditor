@@ -10,15 +10,18 @@ const Profile = () => {
   const [Userdata, setUserData] = useState(null);
   useEffect(() => {
     const path = location.pathname.split('/')[1]; // Gets "editor" or "Draw"
-    // console.log("path : ",path);
-    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-    fetch(`${API_URL}/${path}/send_details`, {
-      method: 'GET',
-      credentials: 'include', // If you're using cookies
-    })
-      .then(res => res.json())
-      .then(data => setUserData(data))
-      .catch(err => console.error("Error fetching user data:", err));
+
+    // Only attempt to fetch data on the authorized routes that provide it
+    if (path === 'editor' || path === 'Draw') {
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+      fetch(`${API_URL}/${path}/send_details`, {
+        method: 'GET',
+        credentials: 'include', // If you're using cookies
+      })
+        .then(res => res.json())
+        .then(data => setUserData(data))
+        .catch(err => console.error("Error fetching user data:", err));
+    }
   }, [location.pathname]);
 
   const handleLogout = async (e) => {
