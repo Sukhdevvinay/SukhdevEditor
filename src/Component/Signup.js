@@ -1,56 +1,82 @@
-// Navbar.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import "../Stylesheet/profile.css"; // You can customize the styling
-
-const Profile = () => {
-  const [showDropdown, setShowDropdown] = useState(false);
+import style from "../Stylesheet/Login.module.css";
+import { Link } from 'react-router';
+const Signup = () => {
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
   const navigate = useNavigate();
-  const [Userdata, setUserData] = useState(null);
-  useEffect(() => {
-    const path = window.location.pathname.split('/')[1]; // Gets "editor" or "Draw"
-    // console.log("path : ",path);
-    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-    fetch(`${API_URL}/${path}/send_details`, {
-      method: 'GET',
-      credentials: 'include', // If you're using cookies
-    })
-      .then(res => res.json())
-      .then(data => setUserData(data))
-      .catch(err => console.error("Error fetching user data:", err));
-  }, []);
-
-  const handleLogout = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    try {
+    try {   // Sending a data to this end Point after filling this form
       const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-      const res = await fetch(`${API_URL}/logout/logout`, {
-        method: 'GET',
-        credentials: 'include'
+      const res = await fetch(`${API_URL}/Signup/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, email, password }),
       });
-      const data = await res.json();
-      alert(data.message);
-      navigate('/logout');
-    } catch {
-      console.log("Logout Failed");
+      const text = await res.text();
+      try { // Now we are try to convert Our text data response form server into JSON format
+        //   // Agar json main convert ho gaya toh try chalega 
+        //   // Agar koi response se  error aati hain toh woh json main convert nhi hoga and then 
+        //   // toh fir woh catch main chala jayega 
+        const data = JSON.parse(text);
+        if (res.status === 200) { // Succesfully signedup
+          navigate('/editor');
+        } else { // failed to signedup
+          alert(data.message);
+        }
+      } catch (e) {
+        console.error("Response was not JSON:", e);
+      }
+    } catch (err) {
+      console.log("Signup Error : ", err);
     }
-    navigate('/');
-  };
-  let First_letter_Name = Userdata?.name?.[0]?.toUpperCase() || "U";
-  let email = Userdata?.email || "User@gamil.com";
+  }
   return (
-    <div className="navbar">
-      <div className="profile-container" onClick={() => setShowDropdown(!showDropdown)}>
-        <span className="spanelement">{First_letter_Name}</span>
-        {showDropdown && (
-          <div className="dropdown-menu">
-            <div className="email">{email}</div>
-            <div onClick={handleLogout}>Logout</div>
-          </div>
-        )}
+    <div className={style.loginWrapper}>
+      <div className={style.logincontainer}>
+        <div className={style.signupheight}>
+          <h2 className={style.logintitle}>Sukh Editors</h2>
+          <form className={style.loginform} method="post" onSubmit={handleSignup}>
+            <div className={style.formgroup}>
+              <label>Name</label>
+              <input
+                type="text"
+                placeholder="Sukhdeveditor"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required />
+            </div>
+            <div className={style.formgroup}>
+              <label>Email</label>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required />
+            </div>
+            <div className={style.formgroup}>
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required />
+            </div>
+            <button type="submit" className={style.loginbutton}>Sign Up</button>
+            <p className={style.signuptext}>
+              Have an account? <Link to="/">Login</Link>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );
 };
 
-export default Profile;
+export default Signup;
