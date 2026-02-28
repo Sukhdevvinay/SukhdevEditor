@@ -23,8 +23,6 @@ export default function Draw() {
 
   // State for synchronization locking
   const isLocked = useRef(false);
-  const isProcessing = useRef(false);
-  const latestServerData = useRef(null);
 
   // UI State
   const selectedColor = useRef('#000000');
