@@ -13,240 +13,205 @@ import {
   Polygon,
   IText
 } from 'fabric';
-const socket = io("https://sukhdev-editor-backend.onrender.com", {  // It is connecting to my Backedn Server
-  withCredentials: true,
-  transports: ['websocket', 'polling']
-});
-// const socket = io("https://sukhdev-editor-backend.onrender.com"); // It is connecting to my Backedn Server
-function Draw() {
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+const socket = io(API_URL);
+
+export default function Draw() {
   const canvasRef = useRef(null);
   const canvasInstance = useRef(null);
-  const [fontSize, setFontSize] = useState(10);
-  const copiedObjects = useRef(null);
-  const selectedColor = useRef('black');
+
+  // State for synchronization locking
+  const isLocked = useRef(false);
+  const isProcessing = useRef(false);
+  const latestServerData = useRef(null);
+
+  // UI State
+  const selectedColor = useRef('#000000');
   const canvasHeight = useRef(window.innerHeight - 60);
-  const mousedwn = useRef(false);
-  const currentLine = useRef(null);
+  const [fontSize, setFontSize] = useState(10);
+  const [currentColor, setCurrentColor] = useState('#000000');
+  const [connectionStatus, setConnectionStatus] = useState("Disconnected");
+  const [lastUpdate, setLastUpdate] = useState("Never");
 
-  useEffect(() => {
-    // Only create a new Fabric Canvas if it doesn't exist
-    if (!canvasInstance.current) {
-      const canvas = new Canvas(canvasRef.current);
-      canvas.setWidth(window.innerWidth);
-      canvas.setHeight(canvasHeight.current);
-      canvasInstance.current = canvas;
-
-      // Your scroll and colorPicker event listeners setup...
-      const wrapper = document.querySelector(".canvas-container");
-
-      const handleScroll = () => {
-        const scrollPosition = wrapper.scrollTop + wrapper.clientHeight;
-        const scrollHeight = wrapper.scrollHeight;
-        if (scrollHeight - scrollPosition < 50) {
-          canvasHeight.current += 250;
-          canvas.setHeight(canvasHeight.current);
-          canvas.getElement().style.height = canvasHeight.current + "px";
-          canvas.requestRenderAll();
-        }
-      };
-
-      wrapper.addEventListener('scroll', handleScroll);
-      wrapper.addEventListener('touchmove', handleScroll);
-
-      const colorPicker = document.querySelector('.color-picker');
-      const colorHandler = (e) => {
-        canvas.freeDrawingBrush.color = e.target.value;
-        selectedColor.current = e.target.value;
-        Properties();
-      };
-      colorPicker.addEventListener('input', colorHandler);
-
-      document.body.tabIndex = 0;
-      document.body.focus();
-      const keydownHandler = (e) => {
-        if (e.ctrlKey && e.key === 'c') Copy();
-        if (e.ctrlKey && e.key === 'v') Paste();
-      };
-      document.addEventListener('keydown', keydownHandler);
-
-      // ✅ Clean up
-      return () => {
-        if (canvasInstance.current) {
-          canvasInstance.current.dispose();
-          canvasInstance.current = null;
-        }
-
-        wrapper.removeEventListener('scroll', handleScroll);
-        wrapper.removeEventListener('touchmove', handleScroll);
-        colorPicker.removeEventListener('input', colorHandler);
-        document.removeEventListener('keydown', keydownHandler);
-      };
-    }
-  }, []);
-
-
+  // --- Helpers ---
   const canvas = () => canvasInstance.current;
 
-
+  // --- Core Lifecycle ---
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (canvasInstance) {
-        const data = canvasInstance.current.toJSON();
-        fetch("https://sukhdev-editor-backend.onrender.com/Draw/save_draw", {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+    // 1. Initialize Canvas
+    if (canvasInstance.current) {
+      canvasInstance.current.dispose();
+    }
+
+    const newCanvas = new Canvas(canvasRef.current, {
+      width: window.innerWidth,
+      height: canvasHeight.current,
+      isDrawingMode: false,
+    });
+    canvasInstance.current = newCanvas;
+    console.log("🎨 Canvas Initialized");
+
+    // 2. Define Send Handler (for Listeners)
+    const handleLocalUpdate = (e) => {
+      // If locked (loading remote data), DO NOT send
+      if (isLocked.current) {
+        // console.log("🔒 Blocked local update (Locked)");
+        return;
+      }
+
+      // Prevent loops from internal rendering events
+      if (e && e.target && e.target.excludeFromExport) return;
+
+      // console.log("📤 Sending Local Update");
+      const data = newCanvas.toJSON();
+      socket.emit("Send_Draw_data", JSON.stringify(data));
+
+      fetch(`${API_URL}/Draw/save_draw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ Draw_data: data })
+      }).catch(err => console.error(err));
+    };
+
+    // 3. Attach Listeners Function
+    const attachListeners = () => {
+      // console.log("🔌 Listeners Attached");
+      newCanvas.on('object:added', handleLocalUpdate);
+      newCanvas.on('object:modified', handleLocalUpdate);
+      newCanvas.on('object:removed', handleLocalUpdate);
+      newCanvas.on('path:created', handleLocalUpdate);
+    };
+
+    // 4. Fetch Initial Data & Load
+    const initData = async () => {
+      try {
+        const res = await fetch(`${API_URL}/Draw/send_details`, {
+          method: 'GET',
           credentials: 'include',
-          body: JSON.stringify({ Draw_data: data })
-        })
-          .then(res => res.json())
-          .then(data => console.log("Auto-saved:", data.message))
-          .catch(err => console.error("Error:", err));
-      }
-    }, 5000);
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, []);
+        });
+        const data = await res.json();
 
-  useEffect(() => {
-    fetch('https://sukhdev-editor-backend.onrender.com/Draw/send_details', {
-      method: 'GET',
-      credentials: 'include', // If you're using cookies
-    })
-      .then(res => res.json())
-      .then(data => {
-        let drawing = data.Draw_data;
-        let parsed_drawing_data = JSON.parse(drawing);
-        // console.log("Parsed Data : ", parsed_drawing_data);
-        if (parsed_drawing_data != "") { // Fetching Details From Backedn at the first Time of Mounting a Page 
-          socket.emit("Send_Draw_data", parsed_drawing_data);
+        if (data && data.Draw_data) {
+          console.log("📥 Initial Data Received... Loading.");
+          isLocked.current = true; // Lock sending
+          const parsed = typeof data.Draw_data === 'string' ? JSON.parse(data.Draw_data) : data.Draw_data;
+
+          try {
+            await newCanvas.loadFromJSON(parsed);
+            newCanvas.renderAll();
+            console.log("✅ Initial Data Loaded & Rendered");
+          } catch (e) {
+            console.error("❌ Error loading initial canvas data:", e);
+          } finally {
+            isLocked.current = false; // Unlock
+            attachListeners(); // ATTACH AFTER LOAD
+          }
+        } else {
+          console.log("ℹ️ No initial data found, starting fresh.");
+          attachListeners(); // Attach anyway
         }
-        const fabricCanvas = canvasInstance.current;
-        fabricCanvas.loadFromJSON(parsed_drawing_data, () => {
-          fabricCanvas.renderAll();
-        });
-      })
-      .catch(err => console.error("Error fetching user data:", err));
-  }, []);
-
-  let isReceiving = false;
-
-  // Write a data which is Recieved From another user from socket connection
-  useEffect(() => {
-    socket.on("Write_Draw_data", (data) => {
-      isReceiving = true;
-      if (canvasInstance.current && data) {
-        canvasInstance.current.loadFromJSON(data, () => {
-          canvasInstance.current.renderAll();
-          isReceiving = false;
-        });
+      } catch (err) {
+        console.error("❌ Error fetching initial data:", err);
+        attachListeners(); // Fallback
       }
-      console.log("Data Recieved : ", data);
-    })
-  }, []);
+    };
+    initData();
 
-  // useEffect(() => {
-  //   if (canvasInstance) {
-  //     const data = canvasInstance.current.toJSON();
-  //     socket.emit("Send_Draw_data", JSON.stringify(data));
-  //   }
-  // }, []);
-
-
-  useEffect(() => {
-    function sendObject(obj) {
-      // console.log("Data is Sendend from function call");
-      const canvasData = obj.toJSON();
-      socket.emit("Send_Draw_data", canvasData);
-    }
-
-    const Draw_area = canvasInstance.current;
-    
-    if (Draw_area) {
-      Draw_area.on('object:added', () => {
-        if (isReceiving) return; // prevent echo
-        let data = canvasInstance.current;
-        sendObject(data);
-      });
-
-      // Listen for object modified (moving, scaling, rotating)
-      Draw_area.on('object:modified', () => {
-        if (isReceiving) return;
-        let data = canvasInstance.current;
-        sendObject(data);
-      });
-
-      // Listen for object removed (deletion)
-      Draw_area.on('object:removed', () => {
-        if (isReceiving) return;
-        let data = canvasInstance.current;
-        sendObject(data);
-      });
-    }
-  }, [])
+    // 5. Setup Window Resize / Scroll
+    const wrapper = document.querySelector(".canvas-container");
+    const handleScroll = () => {
+      if (!wrapper) return;
+      if (wrapper.scrollHeight - (wrapper.scrollTop + wrapper.clientHeight) < 50) {
+        canvasHeight.current += 250;
+        newCanvas.setHeight(canvasHeight.current);
+        newCanvas.getElement().style.height = canvasHeight.current + "px";
+        newCanvas.requestRenderAll();
+      }
+    };
+    if (wrapper) wrapper.addEventListener('scroll', handleScroll);
 
 
+    // 6. Setup Socket Receiver (Sync)
+    const handleRemoteUpdate = async (data) => {
+      if (!data) return;
 
+      console.log("📥 Remote Update Received");
+      setLastUpdate(new Date().toLocaleTimeString());
+
+      isLocked.current = true; // LOCK
+
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      try {
+        await newCanvas.loadFromJSON(parsed);
+        newCanvas.renderAll();
+      } catch (e) {
+        console.error("❌ Error in remote update:", e);
+      } finally {
+        setTimeout(() => {
+          isLocked.current = false;
+        }, 100);
+      }
+    };
+
+    // Socket Status
+    const onConnect = () => setConnectionStatus("Connected (" + socket.id + ")");
+    const onDisconnect = () => setConnectionStatus("Disconnected");
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("Write_Draw_data", handleRemoteUpdate);
+
+    // Check initial
+    if (socket.connected) onConnect();
+
+    // Cleanup
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("Write_Draw_data", handleRemoteUpdate);
+      newCanvas.dispose();
+      if (wrapper) wrapper.removeEventListener('scroll', handleScroll);
+    };
+  }, []); // Run ONCE on mount
+
+
+  // --- Tools Implementation ---
 
   const switchoffline = () => {
+    if (!canvas()) return;
+    canvas().isDrawingMode = false;
+    canvas().selection = true;
     canvas().off('mouse:down');
     canvas().off('mouse:move');
     canvas().off('mouse:up');
+    canvas().defaultCursor = 'default';
   };
 
-  const updateFontSize = (size) => {
-    const active = canvas().getActiveObject();
-    if (active && ['text', 'textbox', 'i-text'].includes(active.type)) {
-      active.set('fontSize', parseInt(size, 10));
-      canvas().requestRenderAll();
-    }
+  const setPencil = () => {
+    if (!canvas()) return;
+    canvas().isDrawingMode = true;
+    canvas().freeDrawingBrush = new PencilBrush(canvas());
+    canvas().freeDrawingBrush.width = 3;
+    canvas().freeDrawingBrush.color = selectedColor.current;
   };
 
-  const addText = () => {
-    const text = new IText('Type here', {
-      left: 100,
-      top: 100,
-      fontFamily: 'Arial',
-      fill: selectedColor.current,
-      fontSize: 24,
-      editable: true
-    });
-    canvas().add(text);
-    canvas().setActiveObject(text);
-    canvas().requestRenderAll();
+  const setHighlighter = () => {
+    if (!canvas()) return;
+    canvas().isDrawingMode = true;
+    canvas().freeDrawingBrush = new PencilBrush(canvas());
+    canvas().freeDrawingBrush.width = 15;
+    canvas().freeDrawingBrush.color = 'rgba(255, 255, 0, 0.4)';
   };
 
-  const startAddingLine = (pos) => {
-    mousedwn.current = true;
-    const ptr = canvas().getPointer(pos.e);
-    currentLine.current = new Line([ptr.x, ptr.y, ptr.x, ptr.y], {
-      stroke: selectedColor.current,
-      strokeWidth: 4,
-      selectable: true,
-      evented: true
-    });
-    canvas().add(currentLine.current);
-    canvas().requestRenderAll();
-  };
-
-  const startDrawingLine = (pos) => {
-    if (mousedwn.current) {
-      const ptr = canvas().getPointer(pos.e);
-      currentLine.current.set({ x2: ptr.x, y2: ptr.y });
-      canvas().requestRenderAll();
-    }
-  };
-
-  const stopDrawingLine = () => {
-    mousedwn.current = false;
-  };
-
-  const erase = () => {
+  const setEraser = () => {
+    if (!canvas()) return;
     switchoffline();
-    canvas().defaultCursor = 'url("data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="black" /></svg>') + '") 0 0, auto';
-    canvas().isDrawingMode = false;
+    canvas().defaultCursor = 'crosshair';
     canvas().selection = false;
-    canvas().forEachObject(obj => obj.selectable = false);
-    canvas().on('mouse:down', function (e) {
+    canvas().forEachObject(o => o.selectable = false);
+    canvas().on('mouse:down', (e) => {
       if (e.target) {
         canvas().remove(e.target);
         canvas().requestRenderAll();
@@ -254,164 +219,149 @@ function Draw() {
     });
   };
 
-  const drawline = () => {
-    canvas().isDrawingMode = false;
-    canvas().selection = false;
+  const setCursor = () => {
+    if (!canvas()) return;
     switchoffline();
-    canvas().on('mouse:down', startAddingLine);
-    canvas().on('mouse:move', startDrawingLine);
-    canvas().on('mouse:up', stopDrawingLine);
+    canvas().forEachObject(o => o.selectable = true);
   };
 
-  const cursor = () => {
-    canvas().isDrawingMode = false;
-    canvas().selection = true;
-    canvas().defaultCursor = 'pointer';
-    canvas().forEachObject(obj => obj.selectable = true);
-    switchoffline();
+  // Shapes
+  const addShape = (type) => {
+    if (!canvas()) return;
+    setCursor();
+
+    const props = { left: 100, top: 100, fill: selectedColor.current };
+    let shape;
+
+    switch (type) {
+      case 'rect': shape = new Rect({ ...props, width: 60, height: 40 }); break;
+      case 'square': shape = new Rect({ ...props, width: 50, height: 50 }); break;
+      case 'circle': shape = new Circle({ ...props, radius: 30 }); break;
+      case 'triangle': shape = new Triangle({ ...props, width: 50, height: 50 }); break;
+      case 'line':
+        shape = new Line([50, 50, 200, 50], { ...props, fill: undefined, stroke: selectedColor.current, strokeWidth: 4 });
+        break;
+      case 'rightTriangle':
+        shape = new Polygon([{ x: 0, y: 0 }, { x: 0, y: 100 }, { x: 100, y: 100 }], props);
+        break;
+      case 'text':
+        shape = new IText('Type Here', { ...props, fontSize: 24 });
+        break;
+      default: return;
+    }
+    canvas().add(shape);
+    canvas().setActiveObject(shape);
   };
 
-  const Highlighter = () => {
-    const Highlighted_data = [];
-    canvas().isDrawingMode = true;
-    canvas().freeDrawingBrush = new PencilBrush(canvas());
-    canvas().freeDrawingBrush.width = 15;
-    canvas().freeDrawingBrush.color = 'rgba(0, 255, 0, 0.3)';
-    const onPathCreated = (opt) => Highlighted_data.push(opt.path);
-    canvas().on('path:created', onPathCreated);
-    const onMouseUp = () => {
-      canvas().isDrawingMode = false;
-      Highlighted_data.forEach(path => canvas().remove(path));
-      canvas().requestRenderAll();
-      canvas().off('path:created', onPathCreated);
-      canvas().off('mouse:up', onMouseUp);
-    };
-    canvas().on('mouse:up', onMouseUp);
-  };
+  const updateColor = (e) => {
+    const color = e.target.value;
+    setCurrentColor(color);
+    selectedColor.current = color;
+    if (!canvas()) return;
 
-  const pencil = () => {
-    canvas().isDrawingMode = true;
-    canvas().freeDrawingBrush = new PencilBrush(canvas());
-    canvas().freeDrawingBrush.width = 3;
-    switchoffline();
-  };
-
-  const drawRect = () => {
-    const rect = new Rect({ left: 100, top: 100, fill: selectedColor.current, width: 35, height: 60 });
-    canvas().add(rect);
-    switchoffline();
-  };
-
-  const drawSqr = () => {
-    const sqr = new Rect({ left: 250, top: 100, height: 50, width: 50, fill: selectedColor.current });
-    canvas().add(sqr);
-    switchoffline();
-  };
-
-  const drawCircle = () => {
-    const circle = new Circle({ left: 250, top: 100, radius: 50, fill: selectedColor.current });
-    canvas().add(circle);
-    switchoffline();
-  };
-
-  const drawTriangle = () => {
-    const triangle = new Triangle({ left: 150, top: 150, width: 100, height: 100, fill: selectedColor.current });
-    canvas().add(triangle);
-    switchoffline();
-  };
-
-  const drawRightAngleTriangle = () => {
-    const triangle = new Polygon([
-      { x: 0, y: 0 }, { x: 0, y: 100 }, { x: 100, y: 100 }
-    ], {
-      left: 250, top: 180, fill: selectedColor.current, stroke: selectedColor.current, strokeWidth: 1
-    });
-    canvas().add(triangle);
-    switchoffline();
-  };
-
-  const Copy = () => {
+    canvas().freeDrawingBrush.color = color;
     const active = canvas().getActiveObject();
     if (active) {
-      active.clone(clone => copiedObjects.current = clone);
+      if (active.type === 'line' || active.type === 'path') active.set({ stroke: color });
+      else active.set({ fill: color });
+      canvas().requestRenderAll();
+      canvas().fire('object:modified');
     }
   };
 
-  const Paste = () => {
-    if (copiedObjects.current) {
-      copiedObjects.current.clone(clone => {
+  const updateFontSize = (e) => {
+    const size = parseInt(e.target.value);
+    setFontSize(size);
+    if (!canvas()) return;
+    const active = canvas().getActiveObject();
+    if (active && (active.type === 'text' || active.type === 'i-text')) {
+      active.set('fontSize', size);
+      canvas().requestRenderAll();
+      canvas().fire('object:modified');
+    }
+  };
+
+  const copiedRef = useRef(null);
+  const handleCopy = () => {
+    const active = canvas()?.getActiveObject();
+    if (active) active.clone(c => copiedRef.current = c);
+  };
+  const handlePaste = () => {
+    if (copiedRef.current && canvas()) {
+      copiedRef.current.clone(cloned => {
         canvas().discardActiveObject();
-        clone.set({ left: clone.left + 20, top: clone.top + 20 });
-        if (clone.type === 'activeSelection') {
-          clone.canvas = canvas();
-          clone.forEachObject(obj => canvas().add(obj));
-          clone.setCoords();
+        cloned.set({ left: cloned.left + 10, top: cloned.top + 10, evented: true });
+        if (cloned.type === 'activeSelection') {
+          cloned.canvas = canvas();
+          cloned.forEachObject(o => canvas().add(o));
+          cloned.setCoords();
         } else {
-          canvas().add(clone);
+          canvas().add(cloned);
         }
-        canvas().setActiveObject(clone);
+        canvas().setActiveObject(cloned);
         canvas().requestRenderAll();
+        canvas().fire('object:added');
       });
     }
   };
 
-  const Properties = () => {
-    const active = canvas().getActiveObject();
-    if (!active) return;
-    const applyColor = (obj) => {
-      if (obj.type === 'line' || obj.type === 'path') obj.set({ stroke: selectedColor.current });
-      else obj.set({ fill: selectedColor.current });
-    };
-    if (active.type === 'activeSelection') active.forEachObject(applyColor);
-    else applyColor(active);
-    canvas().requestRenderAll();
+  const drawLineMode = () => {
+    if (!canvas()) return;
+    switchoffline();
+    canvas().selection = false;
+    let line, isDown;
+    canvas().on('mouse:down', (o) => {
+      isDown = true;
+      const ptr = canvas().getPointer(o.e);
+      line = new Line([ptr.x, ptr.y, ptr.x, ptr.y], {
+        stroke: selectedColor.current,
+        strokeWidth: 4
+      });
+      canvas().add(line);
+    });
+    canvas().on('mouse:move', (o) => {
+      if (!isDown) return;
+      const ptr = canvas().getPointer(o.e);
+      line.set({ x2: ptr.x, y2: ptr.y });
+      canvas().requestRenderAll();
+    });
+    canvas().on('mouse:up', () => { isDown = false; canvas().fire('object:modified'); });
   };
 
   return (
     <>
       <div className="toolbar_draw">
         <Link className="Linkdesign_draw" to="/editor">Editor</Link>
-        <button className="tool-button" onClick={cursor}>🖱️</button>
-        <button className="tool-button" onClick={pencil}>✏️</button>
-        <button className="tool-button" onClick={Highlighter}>✏️2</button>
-        <button className="tool-button" onClick={erase}>
-          <img src="./Eraser.png" alt="Eraser" />
-        </button>
-        <select
-          id="font-size"
-          value={fontSize}
-          onChange={(e) => {
-            setFontSize(e.target.value);
-            updateFontSize(e.target.value);
-          }}>
-          {[10, 12, 14, 16, 18, 20, 22].map(size => (
-            <option key={size} value={size}>{size}px</option>
-          ))}
+        <button className="tool-button" onClick={setCursor} title="Select">🖱️</button>
+        <button className="tool-button" onClick={setPencil} title="Pencil">✏️</button>
+        <button className="tool-button" onClick={setHighlighter} title="Highlighter">✏️2</button>
+        <button className="tool-button" onClick={setEraser} title="Eraser"> <img src="./Eraser.png" alt="Eraser" width="16" /> </button>
+
+        <select value={fontSize} onChange={updateFontSize}>
+          {[10, 12, 14, 16, 20, 24, 32].map(s => <option key={s} value={s}>{s}px</option>)}
         </select>
-        <button className="tool-button" onClick={drawRect}>▮</button>
-        <button className="tool-button" onClick={drawTriangle}>▲</button>
-        <button className="tool-button" onClick={drawSqr}>◼</button>
-        <button className="tool-button" onClick={drawCircle}>⚪</button>
-        <button className="tool-button" onClick={drawline}>▬</button>
-        <button className="tool-button" onClick={drawRightAngleTriangle}>◣</button>
-        <button className="tool-button" onClick={Copy}>C</button>
-        <button className="tool-button" onClick={Paste}>V</button>
-        <button className="tool-button" onClick={addText}>T</button>
-        <input type="color" className="color-picker" title="Pick a color" />
-        <Profile></Profile>
+
+        <button className="tool-button" onClick={() => addShape('rect')}>▮</button>
+        <button className="tool-button" onClick={() => addShape('triangle')}>▲</button>
+        <button className="tool-button" onClick={() => addShape('square')}>◼</button>
+        <button className="tool-button" onClick={() => addShape('circle')}>⚪</button>
+        <button className="tool-button" onClick={drawLineMode}>▬</button>
+        <button className="tool-button" onClick={() => addShape('rightTriangle')}>◣</button>
+        <button className="tool-button" onClick={() => addShape('text')}>T</button>
+
+        <button className="tool-button" onClick={handleCopy}>C</button>
+        <button className="tool-button" onClick={handlePaste}>V</button>
+
+        <input type="color" className="color-picker" value={currentColor} onChange={updateColor} />
+        <Profile />
+        <div style={{ marginLeft: '10px', fontSize: '10px', color: connectionStatus.includes("Connected") ? 'green' : 'red' }}>
+          {connectionStatus} <br /> Last: {lastUpdate}
+        </div>
       </div>
+
       <div className="canvas-container">
-        <canvas id="canvas" ref={canvasRef} height="1000" />
+        <canvas ref={canvasRef} />
       </div>
     </>
   );
 }
-
-
-export default Draw;
-
-
-
-
-
-
