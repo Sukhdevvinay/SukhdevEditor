@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const mongourl = "mongodb://localhost:27017/Editor";
+const mongourl = process.env.MONGO_URI || "mongodb://localhost:27017/Editor";
 
 const connectmongodb = async () => {
     try {
