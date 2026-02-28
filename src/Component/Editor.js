@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
-import { data, Link } from "react-router";
+import { Link } from "react-router";
 import Profile from "./profile";
 import "../Stylesheet/editor.css";
 
@@ -149,7 +149,7 @@ export default function SukhdevEditor() {
         if (editorRef.current) {
           editorRef.current.innerHTML = data.Text_data || "Welcome to SukhdevEditor";
           setTypedData(data.Text_data || "Welcome to SukhdevEditor");
-          if (data.Text_data != "") {
+          if (data.Text_data !== "") {
             // console.log("From fethcing data");
             socket.emit("Send_text_data", data.Text_data);
           }
