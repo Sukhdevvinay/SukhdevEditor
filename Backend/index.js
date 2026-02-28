@@ -10,7 +10,10 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3001";
+let FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3001";
+if (FRONTEND_URL.endsWith('/')) {
+  FRONTEND_URL = FRONTEND_URL.slice(0, -1);
+}
 
 app.use(cors({
   origin: FRONTEND_URL,
